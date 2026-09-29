@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vive Noël</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+         
+
+        <button type="button" class="cart-fab" id="cart-fab" aria-label="Ouvrir le panier">
+    🛒 <span id="cart-count">0</span>
+</button>
+<aside class="cart-panel" id="cart-panel" hidden>
+    <div class="cart-panel-head">
+        <strong>Votre panier</strong>
+        <button type="button" class="cart-close" id="cart-close">✕</button>
+    </div>
+    <div id="cart-items" class="cart-items"></div>
+    <div class="cart-upsell" id="cart-upsell">
+        <p>Ajoutez une <strong>bougie assortie pour 12 €</strong>.</p>
+        <button type="button" class="budget-card-btn" id="add-candle">Ajouter la bougie + 12 €</button>
+    </div>
+    <p class="cart-total">Total : <strong id="cart-total">0 €</strong></p>
+</aside>
+<script>
+const catalog = [
+  { name: "Coffret Douceur Absolue", price: 29, who: "elle", budget: "30", style: "cocooning", icon: "🧣", desc: "Plaid, baume et thé blanc." },
+  { name: "Chocolats fins d'hiver", price: 24, who: "elle", budget: "30", style: "gourmand", icon: "🍫", desc: "Ballotin cacao & épices." },
+  { name: "Coffret Éclat d'Hiver", price: 39, who: "elle", budget: "50", style: "cocooning", icon: "🧴", desc: "Soin, bougie, gants cashmere." },
+  { name: "Coffret Nuit Dorée", price: 49, who: "elle", budget: "50", style: "prestige", icon: "🕯️", desc: "Bougie artisanale et diffuseur." },
+  { name: "Rituel Beauté Prestige", price: 89, who: "elle", budget: "100", style: "prestige", icon: "✨", desc: "Sérum et étui velours." },
+  { name: "Carnet cuir & café", price: 28, who: "lui", budget: "30", style: "aventure", icon: "📓", desc: "Carnet gaufré et café d'origine." },
+  { name: "Coffret Grand Cru", price: 34, who: "lui", budget: "50", style: "gourmand", icon: "☕", desc: "Cafés, chocolats, carnet cuir." },
+  { name: "Nécessaire cuir patiné", price: 79, who: "lui", budget: "100", style: "prestige", icon: "🪵", desc: "Cuir et soin masculin." },
+  { name: "Kit explorateur", price: 95, who: "lui", budget: "luxe", style: "aventure", icon: "🌍", desc: "Thermos et carte collector." },
+  { name: "Bougie pin miniature", price: 18, who: "maison", budget: "30", style: "cocooning", icon: "🕯️", desc: "Notes de sapin." },
+  { name: "Coffret Atmosphère", price: 42, who: "maison", budget: "50", style: "cocooning", icon: "🏡", desc: "Bougie, plaid, allumettes or." },
+  { name: "Table de fête", price: 88, who: "maison", budget: "100", style: "prestige", icon: "🍽️", desc: "Linge de table et photophore." },
+  { name: "Coffret mystère", price: 45, who: "tout", budget: "50", style: "aventure", icon: "🗝️", desc: "Édition limitée atelier." },
+  { name: "Expérience inédite", price: 120, who: "tout", budget: "luxe", style: "prestige", icon: "👑", desc: "Pièce rare d'artisan." },
+  { name: "Tisane & shortbread", price: 22, who: "tout", budget: "30", style: "gourmand", icon: "🫖", desc: "Mélange hiver et biscuits." },
+  { name: "Coffret Lueur rare", price: 149, who: "elle", budget: "luxe", style: "prestige", icon: "💎", desc: "Matières nobles, édition limitée." }
+];
+const answers = { who: null, budget: null, style: null };
+const cart = [];
+const CANDLE = { name: "Bougie assortie pin & épices", price: 12 };
+
+function scoreProduct(p) {
+  var s = 0;
+  if (p.who === answers.who) s += 5;
+  if (p.budget === answers.budget) s += 4;
+  if (p.style === answers.style) s += 4;
+  return s;
+}
+function pickFour() {
+  return catalog.slice().sort(function (a, b) {
+    return scoreProduct(b) - scoreProduct(a) || a.price - b.price;
+  }).slice(0, 4);
+}
+function updateQuizUi() {
+  var ready = answers.who && answers.budget && answers.style;
+  document.getElementById("quiz-submit").disabled = !ready;
+  var n = [answers.who, answers.budget, answers.style].filter(Boolean).length;
+  document.getElementById("quiz-progress").textContent = ready
+    ? "Les 3 réponses sont prêtes."
+    : "Questions répondues : " + n + " / 3";
+}
+document.querySelectorAll(".gc-choices").forEach(function (group) {
+  group.addEventListener("click", function (e) {
+    var btn = e.target.closest(".gc-choice");
+    if (!btn) return;
+    group.querySelectorAll(".gc-choice").forEach(function (b) { b.classList.remove("is-selected"); });
+    btn.classList.add("is-selected");
+    answers[group.dataset.question] = btn.dataset.value;
+    updateQuizUi();
+  });
+});
+document.getElementById("quiz-submit").addEventListener("click", function () {
+  var grid = document.getElementById("quiz-grid");
+  var box = document.getElementById("quiz-results");
+  grid.innerHTML = pickFour().map(function (p) {
+    return '<article class="bs-card"><div class="bs-icon">' + p.icon + '</div><h3 class="bs-card-title">' + p.name + '</h3><p class="bs-card-desc">' + p.desc + '</p><div class="bs-price-line"><span class="bs-price">' + p.price + ' €</span></div><button type="button" class="bs-btn js-add-cart" data-name="' + p.name + '" data-price="' + p.price + '">Ajouter au panier →</button></article>';
+  }).join("");
+  box.hidden = false;
+  box.scrollIntoView({ behavior: "smooth", block: "start" });
+});
+
+function cartHasCandle() {
+  return cart.some(function (i) { return i.name === CANDLE.name; });
+}
+function renderCart() {
+  var total = cart.reduce(function (s, i) { return s + i.price; }, 0);
+  document.getElementById("cart-count").textContent = cart.length;
+  document.getElementById("cart-total").textContent = total + " €";
+  document.getElementById("cart-items").innerHTML = cart.length
+    ? cart.map(function (i) { return '<div class="cart-line"><span>' + i.name + '</span><strong>' + i.price + ' €</strong></div>'; }).join("")
+    : "<p>Panier vide.</p>";
+  document.getElementById("cart-upsell").hidden = !cart.length || cartHasCandle();
+}
+function addToCart(name, price) {
+  cart.push({ name: name, price: Number(price) });
+  renderCart();
+  document.getElementById("cart-panel").hidden = false;
+}
+document.addEventListener("click", function (e) {
+  var btn = e.target.closest(".js-add-cart");
+  if (!btn) return;
+  e.preventDefault();
+  addToCart(btn.dataset.name, btn.dataset.price);
+});
+document.getElementById("add-candle").addEventListener("click", function () {
+  if (!cartHasCandle()) addToCart(CANDLE.name, CANDLE.price);
+});
+document.getElementById("cart-fab").addEventListener("click", function () {
+  var p = document.getElementById("cart-panel");
+  p.hidden = !p.hidden;
+});
+document.getElementById("cart-close").addEventListener("click", function () {
+  document.getElementById("cart-panel").hidden = true;
+});
+
+function formatRemain(ms) {
+  if (ms <= 0) return "Délai dépassé";
+  var h = Math.floor(ms / 36e5);
+  var j = Math.floor(h / 24);
+  if (j >= 2) return j + " jours restants";
+  if (j === 1) return "Plus qu'1 jour";
+  if (h >= 1) return h + " h restantes";
+  return "Moins d'1 h";
+}
+function refreshDeadlines() {
+  var now = new Date();
+  document.querySelectorAll("#cal-body tr").forEach(function (row) {
+    var end = new Date(row.dataset.deadline);
+    var ms = end - now;
+    var hours = ms / 36e5;
+    row.classList.remove("cal-row--closed", "cal-row--last", "cal-row--urgent");
+    var label, klass, rowClass = "";
+    if (ms <= 0) { label = "Fermé"; klass = "cal-status--closed"; rowClass = "cal-row--closed"; }
+    else if (hours <= 24) { label = "Dernières heures"; klass = "cal-status--last"; rowClass = "cal-row--last"; }
+    else if (hours <= 72) { label = "Urgent"; klass = "cal-status--urgent"; rowClass = "cal-row--urgent"; }
+    else { label = "Ouvert"; klass = "cal-status--open"; }
+    if (rowClass) row.classList.add(rowClass);
+    row.querySelector(".cal-remain").textContent = formatRemain(ms);
+    row.querySelector(".cal-status-cell").innerHTML = '<span class="cal-status ' + klass + '">' + label + '</span>';
+  });
+}
+refreshDeadlines();
+
+var now = new Date();
+if (now >= new Date(2026, 11, 20) || new URLSearchParams(location.search).has("preview")) {
+  document.getElementById("carte-digitale").hidden = false;
+}
+var giftBtn = document.getElementById("btn-giftcard");
+if (giftBtn) {
+  giftBtn.addEventListener("click", function (e) {
+    addToCart(e.currentTarget.dataset.name, e.currentTarget.dataset.price);
+  });
+}
+renderCart();
+</script>
+</body>
+</html>
+<body>
+
+            <header>
+                <div class="header-title">
+                    <span class="sapin-deco">🎄</span> Vive Noël !
+                </div>
+                <nav id="nav">
+                    <a href="" class="nav1">Accueil</a>
+                    <a href="" class="nav1">À propos</a>
+                    <a href="" class="nav1">Contactez-nous</a>
+                </nav>
+            </header>
+
+
+            
+
+                <div id="Anc">
+                    <!-- Figurine du Père Noël assise sur le rebord -->
+                    <div class="pere-noel-figurine" title="Figurine du Père Noël">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="85" height="85">
+                            <defs>
+                                <filter id="ombreFigurine" x="-20%" y="-20%" width="140%" height="140%">
+                                    <feDropShadow dx="0" dy="4" stdDeviation="3" flood-color="#3B2F2A" flood-opacity="0.35"/>
+                                </filter>
+                            </defs>
+                            <g filter="url(#ombreFigurine)">
+                                <!-- Corps / Manteau rouge rubis #A4161A -->
+                                <path d="M35,68 Q60,58 85,68 L92,103 Q60,113 28,103 Z" fill="#A4161A"/>
+                                
+                                <!-- Ceinture brun noble #3B2F2A & boucle or #C8A45A -->
+                                <rect x="32" y="88" width="56" height="10" rx="2" fill="#3B2F2A"/>
+                                <rect x="52" y="85" width="16" height="16" rx="3" fill="#C8A45A"/>
+                                <rect x="56" y="89" width="8" height="8" rx="1" fill="#3B2F2A"/>
+                                
+                                <!-- Fourrure ivoire #FBF6EE du manteau -->
+                                <rect x="56" y="68" width="8" height="20" rx="3" fill="#FBF6EE"/>
+                                <path d="M26,101 Q60,113 94,101" stroke="#FBF6EE" stroke-width="6" stroke-linecap="round" fill="none"/>
+                                
+                                <!-- Visage -->
+                                <circle cx="60" cy="50" r="20" fill="#fcdbb7"/>
+                                <!-- Yeux & Joues -->
+                                <circle cx="53" cy="46" r="2.5" fill="#3B2F2A"/>
+                                <circle cx="67" cy="46" r="2.5" fill="#3B2F2A"/>
+                                <circle cx="48" cy="52" r="3.5" fill="#e8989b" opacity="0.6"/>
+                                <circle cx="72" cy="52" r="3.5" fill="#e8989b" opacity="0.6"/>
+                                <!-- Nez rond -->
+                                <circle cx="60" cy="50" r="3.5" fill="#e5898d"/>
+                                
+                                <!-- Barbe généreuse ivoire #FBF6EE -->
+                                <path d="M42,52 Q36,73 50,84 Q60,92 70,84 Q84,73 78,52 Q70,60 60,60 Q50,60 42,52 Z" fill="#FBF6EE"/>
+                                <!-- Moustache -->
+                                <path d="M60,54 Q50,50 42,56 Q52,63 60,58 Q68,63 78,56 Q70,50 60,54 Z" fill="#ffffff"/>
+
+                                <!-- Bonnet rouge rubis #A4161A -->
+                                <path d="M40,40 Q60,23 80,40 Q86,20 72,10 Q60,3 45,13 Q35,20 40,40 Z" fill="#A4161A"/>
+                                <!-- Rebord fourrure du bonnet #FBF6EE -->
+                                <rect x="36" y="34" width="48" height="10" rx="5" fill="#FBF6EE"/>
+                                <!-- Pompon ivoire #FBF6EE -->
+                                <circle cx="76" cy="10" r="7" fill="#FBF6EE"/>
+                                <!-- Feuille de houx vert forêt #1F3D2B & baie or #C8A45A -->
+                                <path d="M44,34 Q40,28 46,26 Q48,32 44,34 Z" fill="#1F3D2B"/>
+                                <circle cx="47" cy="31" r="2.5" fill="#C8A45A"/>
+
+                                <!-- Petits gants posés sur le rebord de la carte -->
+                                <ellipse cx="34" cy="96" rx="7" ry="5" fill="#A4161A"/>
+                                <ellipse cx="86" cy="96" rx="7" ry="5" fill="#A4161A"/>
+                                <ellipse cx="34" cy="93" rx="5" ry="2" fill="#FBF6EE"/>
+                                <ellipse cx="86" cy="93" rx="5" ry="2" fill="#FBF6EE"/>
+                            </g>
+                        </svg>
+                    </div>
+
+                        <h1 id="ANNONCE">ANNONCE</h1>
+                        <p id="Ann">Emballage cadeau offert · Livré avant le 24/12 si commandé avant le 18/12</p>
+
+                </div>
+
+                <!-- ========================================================
+                     SECTION HERO : COFFRET OUVERT SOUS LUMIÈRE CHAUDE
+                     ======================================================== -->
+                <main class="hero-section">
+                    <div class="hero-container">
+                        <!-- Colonne Texte & Slogan -->
+                        <div class="hero-content">
+                            <div class="hero-badge">
+                                <span class="badge-sparkle">✨</span> Édition Prestige de Noël
+                            </div>
+                            <h2 class="hero-slogan">
+                                « Le cadeau parfait,<br>
+                                <span class="slogan-accent">déjà emballé</span> »
+                            </h2>
+                            <p class="hero-description">
+                                Ouvrez les portes de la magie des fêtes. Conçu dans un écrin raffiné aux finitions dorées, notre coffret exclusif est prêt à illuminer le pied de votre sapin dès son arrivée.
+                            </p>
+                            <div class="hero-actions">
+                                <a href="#" class="btn-coffret">Découvrir le coffret &rarr;</a>
+                                <div class="hero-reassurances">
+                                    <span>🎁 Nœud fait main</span>
+                                    <span>•</span>
+                                    <span>📦 Expédition 48h</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Colonne Coffret Ouvert avec Halo de Lumière Chaude -->
+                        <div class="hero-scene">
+                            <!-- Halo de lumière chaude dorée enveloppante -->
+                            <div class="halo-chaud"></div>
+
+                            <!-- Coffret de Noël ouvert 3D vectoriel -->
+                            <div class="coffret-svg-wrapper">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 320" class="coffret-svg">
+                                    <defs>
+                                        <!-- Rayons de lumière chaude jaillissant du coffret -->
+                                        <radialGradient id="lumiereInterieure" cx="50%" cy="65%" r="55%">
+                                            <stop offset="0%" stop-color="#FFF5D9" stop-opacity="1"/>
+                                            <stop offset="40%" stop-color="#C8A45A" stop-opacity="0.8"/>
+                                            <stop offset="100%" stop-color="#C8A45A" stop-opacity="0"/>
+                                        </radialGradient>
+                                        
+                                        <!-- Dégradé du ruban or précieux #C8A45A -->
+                                        <linearGradient id="rubanOr" x1="0%" y1="0%" x2="100%" y2="100%">
+                                            <stop offset="0%" stop-color="#E5C77A"/>
+                                            <stop offset="50%" stop-color="#C8A45A"/>
+                                            <stop offset="100%" stop-color="#9C7930"/>
+                                        </linearGradient>
+
+                                        <!-- Ombre portée au sol #3B2F2A -->
+                                        <filter id="ombreSol" x="-20%" y="-20%" width="140%" height="140%">
+                                            <feGaussianBlur stdDeviation="6"/>
+                                        </filter>
+                                    </defs>
+
+                                    <!-- Ombre du coffret au sol -->
+                                    <ellipse cx="180" cy="275" rx="130" ry="25" fill="#3B2F2A" opacity="0.25" filter="url(#ombreSol)"/>
+
+                                    <!-- Faisceau de lumière chaude qui monte du coffret -->
+                                    <polygon points="180,180 70,40 290,40" fill="url(#lumiereInterieure)" opacity="0.75" class="faisceau-lumineux"/>
+
+                                    <!-- Étoiles et étincelles dorées flottant dans la lumière chaude -->
+                                    <g class="etincelles">
+                                        <polygon points="180,60 183,72 195,75 183,78 180,90 177,78 165,75 177,72" fill="#C8A45A"/>
+                                        <polygon points="130,85 132,92 140,94 132,96 130,104 128,96 120,94 128,92" fill="#FBF6EE"/>
+                                        <polygon points="230,80 232,88 240,90 232,92 230,100 228,92 220,90 228,88" fill="#C8A45A"/>
+                                        <circle cx="155" cy="115" r="3" fill="#FFF5D9"/>
+                                        <circle cx="210" cy="110" r="3.5" fill="#FFF5D9"/>
+                                        <circle cx="170" cy="140" r="2.5" fill="#C8A45A"/>
+                                        <circle cx="195" cy="145" r="3" fill="#FBF6EE"/>
+                                    </g>
+
+                                    <!-- COFFRET OUVERT : COUVERCLE INCLINÉ VERS L'ARRIÈRE -->
+                                    <g class="couvercle-ouvert">
+                                        <!-- Dessous du couvercle avec éclat doré -->
+                                        <polygon points="80,110 180,85 280,110 180,135" fill="#750E12"/>
+                                        <polygon points="80,110 180,85 180,95 80,120" fill="#A4161A"/>
+                                        <polygon points="180,85 280,110 280,120 180,95" fill="#580A0D"/>
+                                        <!-- Nœud doré défait posé sur le couvercle -->
+                                        <ellipse cx="180" cy="108" rx="20" ry="10" fill="url(#rubanOr)"/>
+                                        <circle cx="180" cy="108" r="6" fill="#E5C77A"/>
+                                    </g>
+
+                                    <!-- INTÉRIEUR DU COFFRET (Drapé de satin ivoire éclairé) -->
+                                    <polygon points="85,175 180,205 275,175 180,148" fill="#FFF5D9"/>
+                                    <ellipse cx="180" cy="176" rx="75" ry="22" fill="#FBF6EE"/>
+                                    <!-- Cœur lumineux doré au fond de la boîte -->
+                                    <ellipse cx="180" cy="176" rx="50" ry="15" fill="#C8A45A" opacity="0.6"/>
+                                    <ellipse cx="180" cy="176" rx="30" ry="9" fill="#FFF5D9"/>
+
+                                    <!-- BASE DU COFFRET (Face gauche rouge rubis #A4161A) -->
+                                    <polygon points="85,175 180,205 180,270 85,240" fill="#A4161A"/>
+                                    <!-- BASE DU COFFRET (Face droite rouge rubis ombré) -->
+                                    <polygon points="180,205 275,175 275,240 180,270" fill="#780D10"/>
+
+                                    <!-- Liseré supérieur or sur le bord de la boîte -->
+                                    <polyline points="85,175 180,205 275,175" stroke="url(#rubanOr)" stroke-width="3" fill="none"/>
+
+                                    <!-- RUBAN DORÉ VERTICAL SUR FACE GAUCHE -->
+                                    <polygon points="128,189 138,192 138,257 128,254" fill="url(#rubanOr)"/>
+                                    <!-- RUBAN DORÉ VERTICAL SUR FACE DROITE -->
+                                    <polygon points="222,192 232,189 232,254 222,257" fill="url(#rubanOr)"/>
+
+                                    <!-- RUBAN SATINÉ DORÉ QUI DRAPE DU COFFRET VERS LE SOL -->
+                                    <path d="M180,188 C160,210 135,215 140,245 C145,270 120,275 105,278" stroke="url(#rubanOr)" stroke-width="8" stroke-linecap="round" fill="none"/>
+                                    <path d="M180,188 C195,210 215,225 210,250 C205,270 230,278 245,280" stroke="url(#rubanOr)" stroke-width="8" stroke-linecap="round" fill="none"/>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                </main>
+
+                    <!-- ========================================================
+                     SECTION GUIDE : GUIDE COMPLET
+                     ======================================================== -->
+                <section id="guide-cadeaux" class="guide-section">
+    <div class="section-header">
+        <span class="section-badge">✨ Inspirations de Noël</span>
+        <h2 class="section-title">Guide de cadeaux</h2>
+        <p class="section-subtitle">
+            Trouvez en 3 clics : pour qui ? quel budget ? quel style ?
+        </p>
+    </div>
+    <div class="guide-grid">
+        <article class="guide-card">
+            <div class="guide-card-header">
+                <span class="guide-tag">Élégance &amp; Douceur</span>
+                <span class="guide-icon">🌸</span>
+            </div>
+            <h3 class="guide-card-title">Pour elle</h3>
+            <p class="guide-card-desc">
+                Rituels de beauté délicats, senteurs florales réconfortantes, bijoux d'artisans et douceurs raffinées pour la choyer sous le sapin.
+            </p>
+            <div class="guide-tags">
+                <span class="tag-pill">Soins précieux</span>
+                <span class="tag-pill">Senteurs d'hiver</span>
+                <span class="tag-pill">Douceur</span>
+            </div>
+            <a href="#guide-complet" class="guide-card-btn">Découvrir les coffrets &rarr;</a>
+        </article>
+        <article class="guide-card">
+            <div class="guide-card-header">
+                <span class="guide-tag">Caractère &amp; Style</span>
+                <span class="guide-icon">🪵</span>
+            </div>
+            <h3 class="guide-card-title">Pour lui</h3>
+            <p class="guide-card-desc">
+                Accessoires en cuir noble, rituels de soin au masculin, cafés d'exception et trouvailles d'artisans au charme authentique.
+            </p>
+            <div class="guide-tags">
+                <span class="tag-pill">Cuir patiné</span>
+                <span class="tag-pill">Dégustation</span>
+                <span class="tag-pill">Authenticité</span>
+            </div>
+            <a href="#guide-complet" class="guide-card-btn">Découvrir les coffrets &rarr;</a>
+        </article>
+        <article class="guide-card">
+            <div class="guide-card-header">
+                <span class="guide-tag">Atmosphère &amp; Fêtes</span>
+                <span class="guide-icon">🕯️</span>
+            </div>
+            <h3 class="guide-card-title">Pour la maison</h3>
+            <p class="guide-card-desc">
+                Bougies artisanales aux notes de pin et d'épices douces, art de la table de fête et textiles réconfortants pour un hiver douillet.
+            </p>
+            <div class="guide-tags">
+                <span class="tag-pill">Bougies d'hiver</span>
+                <span class="tag-pill">Art de vivre</span>
+                <span class="tag-pill">Cocooning</span>
+            </div>
+            <a href="#guide-complet" class="guide-card-btn">Découvrir les coffrets &rarr;</a>
+        </article>
+        <article class="guide-card">
+            <div class="guide-card-header">
+                <span class="guide-tag">Inédit &amp; Rareté</span>
+                <span class="guide-icon">🗝️</span>
+            </div>
+            <h3 class="guide-card-title">Pour celui qui a tout</h3>
+            <p class="guide-card-desc">
+                Expériences inédites, curiosités d'exception et coffrets mystères conçus pour surprendre et émerveiller les plus exigeants.
+            </p>
+            <div class="guide-tags">
+                <span class="tag-pill">Édition rare</span>
+                <span class="tag-pill">Effet surprise</span>
+                <span class="tag-pill">Émerveillement</span>
+            </div>
+            <a href="#guide-complet" class="guide-card-btn">Découvrir les coffrets &rarr;</a>
+        </article>
+    </div>
+</section>
+
+
+                     <!-- ========================================================
+                     SECTION QUIZ : QUIZ CADEAU
+                     ======================================================== -->
+
+    <section id="guide-complet" class="gc-section">
+    <div class="section-header">
+        <span class="section-badge">🧭 Quiz cadeau</span>
+        <h2 class="section-title">3 questions, 4 coffrets</h2>
+        <p class="section-subtitle">Pour qui ? Quel budget ? Quel style ? Une sélection de 4 produits s’affiche.</p>
+    </div>
+    <div class="gc-steps">
+        <div class="gc-step">
+            <div class="gc-step-num">1</div>
+            <div class="gc-step-icon">👤</div>
+            <h3 class="gc-step-title">Pour qui ?</h3>
+            <div class="gc-choices" data-question="who">
+                <button type="button" class="gc-choice" data-value="elle">Elle 🌸</button>
+                <button type="button" class="gc-choice" data-value="lui">Lui 🪵</button>
+                <button type="button" class="gc-choice" data-value="maison">Maison 🕯️</button>
+                <button type="button" class="gc-choice" data-value="tout">A tout 🗝️</button>
+            </div>
+        </div>
+        <div class="gc-arrow">→</div>
+        <div class="gc-step">
+            <div class="gc-step-num">2</div>
+            <div class="gc-step-icon">💶</div>
+            <h3 class="gc-step-title">Quel budget ?</h3>
+            <div class="gc-choices" data-question="budget">
+                <button type="button" class="gc-choice" data-value="30">&lt; 30 €</button>
+                <button type="button" class="gc-choice" data-value="50">&lt; 50 €</button>
+                <button type="button" class="gc-choice" data-value="100">&lt; 100 €</button>
+                <button type="button" class="gc-choice" data-value="luxe">Luxe</button>
+            </div>
+        </div>
+        <div class="gc-arrow">→</div>
+        <div class="gc-step">
+            <div class="gc-step-num">3</div>
+            <div class="gc-step-icon">🎨</div>
+            <h3 class="gc-step-title">Quel style ?</h3>
+            <div class="gc-choices" data-question="style">
+                <button type="button" class="gc-choice" data-value="gourmand">Gourmand</button>
+                <button type="button" class="gc-choice" data-value="cocooning">Cocooning</button>
+                <button type="button" class="gc-choice" data-value="prestige">Prestige</button>
+                <button type="button" class="gc-choice" data-value="aventure">Aventure</button>
+            </div>
+        </div>
+    </div>
+    <p class="quiz-progress" id="quiz-progress">Choisissez une réponse à chaque question.</p>
+    <div class="gc-cta-wrap">
+        <button type="button" class="gc-cta-btn" id="quiz-submit" disabled>Voir mes 4 coffrets</button>
+    </div>
+    <div id="quiz-results" class="quiz-results" hidden>
+        <h3 class="quiz-results-title">Votre sélection de 4 produits</h3>
+        <div id="quiz-grid" class="bs-grid"></div>
+    </div>
+</section>
+                <!-- ========================================================
+                     SECTION COFFRETS BEST-SELLERS (Valeur contenu vs prix)
+                     ======================================================== -->
+                <section id="best-sellers" class="bs-section">
+                    <div class="section-header">
+                        <span class="section-badge">⭐ Coups de cœur</span>
+                        <h2 class="section-title">Coffrets Best-Sellers</h2>
+                        <p class="section-subtitle">
+                            « La valeur est là, le prix vous surprendra »
+                        </p>
+                    </div>
+
+                    <div class="bs-grid">
+                        <!-- Coffret 1 -->
+                        <article class="bs-card">
+                            <div class="bs-card-top">
+                                <span class="bs-rank">N°1</span>
+                                <span class="bs-heart">❤️ Coup de cœur</span>
+                            </div>
+                            <div class="bs-icon">🧴</div>
+                            <h3 class="bs-card-title">Coffret Éclat d'Hiver</h3>
+                            <p class="bs-card-desc">Soin hydratant premium, bougie pin &amp; épices, gants cashmere. Valeur estimée : 78 €</p>
+                            <div class="bs-value-bar">
+                                <div class="bs-value-label">Valeur contenu</div>
+                                <div class="bs-bar-track"><div class="bs-bar-fill" style="width:90%"></div></div>
+                                <span class="bs-value-text">78 € de produits</span>
+                            </div>
+                            <div class="bs-price-line">
+                                <span class="bs-price">39 €</span>
+                                <span class="bs-saving">Vous économisez 39 €</span>
+                            </div>
+                            <a href="#" class="bs-btn">Commander &rarr;</a>
+                        </article>
+
+                        <!-- Coffret 2 -->
+                        <article class="bs-card">
+                            <div class="bs-card-top">
+                                <span class="bs-rank">N°2</span>
+                                <span class="bs-heart">🔥 Tendance</span>
+                            </div>
+                            <div class="bs-icon">☕</div>
+                            <h3 class="bs-card-title">Coffret Grand Cru</h3>
+                            <p class="bs-card-desc">3 cafés d'origine, chocolats de dégustation, carnet cuir gaufré. Valeur estimée : 65 €</p>
+                            <div class="bs-value-bar">
+                                <div class="bs-value-label">Valeur contenu</div>
+                                <div class="bs-bar-track"><div class="bs-bar-fill" style="width:78%"></div></div>
+                                <span class="bs-value-text">65 € de produits</span>
+                            </div>
+                            <div class="bs-price-line">
+                                <span class="bs-price">34 €</span>
+                                <span class="bs-saving">Vous économisez 31 €</span>
+                            </div>
+                            <a href="#" class="bs-btn">Commander &rarr;</a>
+                        </article>
+
+                        <!-- Coffret 3 -->
+                        <article class="bs-card">
+                            <div class="bs-card-top">
+                                <span class="bs-rank">N°3</span>
+                                <span class="bs-heart">✨ Prestige</span>
+                            </div>
+                            <div class="bs-icon">🕯️</div>
+                            <h3 class="bs-card-title">Coffret Nuit Dorée</h3>
+                            <p class="bs-card-desc">Grande bougie artisanale, diffuseur de parfum, tisane hiver bio. Valeur estimée : 92 €</p>
+                            <div class="bs-value-bar">
+                                <div class="bs-value-label">Valeur contenu</div>
+                                <div class="bs-bar-track"><div class="bs-bar-fill" style="width:95%"></div></div>
+                                <span class="bs-value-text">92 € de produits</span>
+                            </div>
+                            <div class="bs-price-line">
+                                <span class="bs-price">49 €</span>
+                                <span class="bs-saving">Vous économisez 43 €</span>
+                            </div>
+                            <a href="#" class="bs-btn">Commander &rarr;</a>
+                        </article>
+
+                        <!-- Coffret 4 -->
+                        <article class="bs-card">
+                            <div class="bs-card-top">
+                                <span class="bs-rank">N°4</span>
+                                <span class="bs-heart">🎄 Exclusif</span>
+                            </div>
+                            <div class="bs-icon">🧣</div>
+                            <h3 class="bs-card-title">Coffret Douceur Absolue</h3>
+                            <p class="bs-card-desc">Plaid mérinos, baume lèvres naturel, thé blanc de saison. Valeur estimée : 58 €</p>
+                            <div class="bs-value-bar">
+                                <div class="bs-value-label">Valeur contenu</div>
+                                <div class="bs-bar-track"><div class="bs-bar-fill" style="width:70%"></div></div>
+                                <span class="bs-value-text">58 € de produits</span>
+                            </div>
+                            <div class="bs-price-line">
+                                <span class="bs-price">29 €</span>
+                                <span class="bs-saving">Vous économisez 29 €</span>
+                            </div>
+                            <a href="#" class="bs-btn">Commander &rarr;</a>
+                        </article>
+                    </div>
+                </section>
+
+                <!-- ========================================================
+                     SECTION PERSONNALISATION (Fiche)
+                     ======================================================== -->
+                <section id="personnalisation" class="perso-section">
+                    <div class="section-header">
+                        <span class="section-badge">✍️ Touche personnelle</span>
+                        <h2 class="section-title">Personnalisation</h2>
+                        <p class="section-subtitle">
+                            « Livré dans son coffret, ruban et carte manuscrite offerts »
+                        </p>
+                    </div>
+
+                    <div class="perso-fiche">
+                        <!-- Option Gravure -->
+                        <div class="perso-item">
+                            <div class="perso-item-icon">🔤</div>
+                            <div class="perso-item-content">
+                                <h3 class="perso-item-title">Gravure personnalisée</h3>
+                                <p class="perso-item-desc">Un prénom, une date, un message gravé à la main sur le couvercle de votre coffret. Une signature unique qui accompagne le présent pour toujours.</p>
+                                <div class="perso-tags">
+                                    <span class="perso-pill">Prénom</span>
+                                    <span class="perso-pill">Date</span>
+                                    <span class="perso-pill">Message court</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="perso-divider"></div>
+
+                        <!-- Option Carte manuscrite -->
+                        <div class="perso-item">
+                            <div class="perso-item-icon">💌</div>
+                            <div class="perso-item-content">
+                                <h3 class="perso-item-title">Carte manuscrite offerte</h3>
+                                <p class="perso-item-desc">Vos mots, écrits à la plume sur carte vélin ivoire, glissée dans l'écrin. Un geste d'une sincérité rare, à la hauteur de vos émotions.</p>
+                                <div class="perso-tags">
+                                    <span class="perso-pill">Carte vélin ivoire</span>
+                                    <span class="perso-pill">Écriture à la plume</span>
+                                    <span class="perso-pill">Offerte</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="perso-divider"></div>
+
+                        <!-- Option Ruban & Emballage -->
+                        <div class="perso-item">
+                            <div class="perso-item-icon">🎀</div>
+                            <div class="perso-item-content">
+                                <h3 class="perso-item-title">Ruban satiné &amp; emballage prestige</h3>
+                                <p class="perso-item-desc">Chaque coffret part enrubanné d'un satin or au nœud fait main, glissé dans une boîte cadeau prête à offrir. Zéro effort, tout le plaisir.</p>
+                                <div class="perso-tags">
+                                    <span class="perso-pill">Ruban or offert</span>
+                                    <span class="perso-pill">Nœud fait main</span>
+                                    <span class="perso-pill">Prêt à offrir</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Bandeau récapitulatif -->
+                        <div class="perso-banner">
+                            <span class="perso-banner-icon">🎁</span>
+                            <span class="perso-banner-text">« Livré dans son coffret, ruban et carte manuscrite offerts »</span>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="calendrier" class="cal-section">
+    <div class="section-header">
+        <span class="section-badge">📅 Urgence réelle</span>
+        <h2 class="section-title">Dates limites par mode</h2>
+        <p class="section-subtitle" id="cal-live-note">
+            Les statuts se mettent à jour tout seuls selon la date du jour.
+        </p>
+    </div>
+    <div class="cal-table-wrap">
+        <table class="cal-table">
+            <thead>
+                <tr>
+                    <th>Mode</th>
+                    <th>Pour Noël, commander avant</th>
+                    <th>Délai</th>
+                    <th>Temps restant</th>
+                    <th>Statut</th>
+                </tr>
+            </thead>
+            <tbody id="cal-body">
+                <tr data-deadline="2026-12-18T18:00:00">
+                    <td><span class="cal-event">📦 Standard Colissimo</span></td>
+                    <td><strong class="cal-date">18 déc. 2026, 18h</strong></td>
+                    <td>2–3 jours ouvrés</td>
+                    <td class="cal-remain">—</td>
+                    <td class="cal-status-cell">—</td>
+                </tr>
+                <tr data-deadline="2026-12-22T12:00:00">
+                    <td><span class="cal-event">⚡ Express Chronopost</span></td>
+                    <td><strong class="cal-date">22 déc. 2026, 12h</strong></td>
+                    <td>24h ouvrées</td>
+                    <td class="cal-remain">—</td>
+                    <td class="cal-status-cell">—</td>
+                </tr>
+                <tr data-deadline="2026-12-23T10:00:00">
+                    <td><span class="cal-event">🚴 Same day (grandes villes)</span></td>
+                    <td><strong class="cal-date">23 déc. 2026, 10h</strong></td>
+                    <td>Le jour même</td>
+                    <td class="cal-remain">—</td>
+                    <td class="cal-status-cell">—</td>
+                </tr>
+                <tr data-deadline="2026-12-24T21:00:00" data-digital="true">
+                    <td><span class="cal-event">✉️ Carte cadeau digitale</span></td>
+                    <td><strong class="cal-date">24 déc. 2026, 21h</strong></td>
+                    <td>Envoi immédiat par e-mail</td>
+                    <td class="cal-remain">—</td>
+                    <td class="cal-status-cell">—</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <p class="cal-note">Atelier du lundi au vendredi. Gravure = +1 jour. Passé l’heure limite, le mode passe en « Fermé ».</p>
+</section>
+
+</body>
+</html>
